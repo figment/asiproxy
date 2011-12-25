@@ -1,0 +1,114 @@
+                     ASI Proxy 1.0
+               ============================
+
+This package includes a Script Dragon proxy and a tool to copy ASI files.
+
+This is really only intended for developers of ASI plugins.  I wrote this to
+alleviate headaches I had with debugging scripts and repeatedly restarting
+Skyrim to debug small changes.  It will catch exceptions and generate log
+which really arent that useful in actual practice.
+
+How it works is Script Dragon loads this Proxy and this loads the ASI to debug
+and runs it and then waits for an event telling it to shutdown and exits
+if it sees that event else it runs as normal.
+
+When you want to replace the ASI run the copyasi.exe utility to start the copy 
+and it will will trigger the shutdown event and wait for acknowledgement from the 
+proxy that the shutdown has completed.  Then it copies the ASI to the destination.
+
+Its manditory that the game be switched to at this point as the plugin has to 
+have an opportunity to unload before it can be copied.  The copyasi.exe will wait
+for about 15 seconds by default before giving up.
+
+The proxy waits for the ASI file to be copied and then loads it again when the 
+file modification time is updated.
+
+This is a little more complicated than I'd prefer but it works and now I dont 
+have to shutdown skyrim all the time.
+   
+Prerequisites:
+  * You need Script Dragon
+    http://alexander.sannybuilder.com/?category=other&altname=skyrim_script_dragon
+  
+  * You need another ASI to modify
+     
+Quick Start:
+ 1. Edit the ASI source to debug and add the following functions.
+    Dont change the event name as its the same name used by the copy and proxy.
+
+    /////////////////// START PROXY HELPER FUNCTIONS /////////////////////////
+    static HANDLE s_asiShutdownEvent = INVALID_HANDLE_VALUE;
+    void InitShutdownEvent()
+    {
+        if (s_asiShutdownEvent == INVALID_HANDLE_VALUE)
+        {
+            extern HMODULE g_hModule;
+            char szTemp[MAX_PATH], fname[_MAX_FNAME];
+            szTemp[0] = 0;
+            GetModuleFileNameA(g_hModule, szTemp, _countof(szTemp));
+            _splitpath_s(szTemp, NULL,0,NULL,0,fname,_countof(fname),NULL,0);
+            sprintf_s(szTemp, "TESV.ASI.%s.SHUTDOWN", fname);
+            _strupr_s(szTemp);
+            s_asiShutdownEvent = CreateEvent(NULL, TRUE, FALSE, szTemp);
+        }
+    }
+
+    void CloseShutdownEvent()
+    {
+        if (s_asiShutdownEvent != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(s_asiShutdownEvent);
+            s_asiShutdownEvent = INVALID_HANDLE_VALUE;
+        }
+    }
+
+    bool CheckForShutdown()
+    {
+        InitShutdownEvent();
+        return ( WAIT_OBJECT_0 == WaitForSingleObject(s_asiShutdownEvent,0) );
+    }
+    
+    /////////////////// END PROXY HELPER FUNCTIONS /////////////////////////
+  
+ 2. Change the while loop in the code to something like the following
+ 
+    void main()
+    {
+        InitShutdownEvent();
+        while (!CheckForShutdown())
+        {
+            InnerLoop();
+            Wait(0);
+        }
+        CloseShutdownEvent();
+    }
+
+ 3. Recompile the ASI with previous changes
+ 
+ 4. Remove the original ASI from the Skyrim folder.  This is important as
+    Script Dragon will also load it and will then lock the file
+ 
+ 5. Copy ASIProxy.ASI and its ASIProxy.INI file to the Skyrim folder.  
+    I prefer the ASI folder to avoid clutter.
+    
+ 6. Edit ASIProxy.INI and set the proxy_name to point at your script.
+    I recommend not using the build folder directly.  I create a folder
+    called 'proxy' under ASI and put the file there with its INI file.
+    The copyasi tool will search this folder and guess the output if
+    you do not specify an output location.
+ 
+ 7. Start Skyrim. Verify plugin is loaded.
+ 
+ 8. Recompile with a change.  Use the copyasi.exe to copy the output file.
+    I put a local copy in the solution folder and then attached a post 
+    build script in VC to run 'copyasi "$(TargetPath)"' which then searches 
+    the proxy folder under skyrim for the asi file and copies it over.
+ 
+Source Code:
+  * Source is hosted at github.org
+    - git://github.org/figment/asiproxy.git
+    - git://github.org/figment/copyasi.git
+  
+Acknowledgements:
+  * Alexander Blade for Script Dragon
+  

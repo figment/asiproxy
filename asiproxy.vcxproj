@@ -77,9 +77,10 @@ copy "$(OutDir)$(TargetName)$(TargetExt)" "..\bin"</Command>
     <ClInclude Include="common\plugin.h" />
     <ClInclude Include="common\skyscript.h" />
     <ClInclude Include="common\types.h" />
-    <ClInclude Include="resource1.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="ASIProxy.ini" />
+    <None Include="ASIProxy.txt" />
     <None Include="common\plugin.def" />
   </ItemGroup>
   <ItemGroup>

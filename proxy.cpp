@@ -174,7 +174,7 @@ static LPSTR GetProxyConfigName(LPSTR outpath, int pathlen)
 	return outpath;
 }
 
-static LPSTR GetProxyName(LPSTR outname, int maxlen)
+static LPSTR GetDefaultProxyName(LPSTR outname, int maxlen)
 {
 	extern HMODULE g_hModule;
 	char outpath[_MAX_PATH];
@@ -255,8 +255,11 @@ void PrintNote(LogLevel level, char *pattern, ...)
 
 void Initialize()
 {
+	char szDefaultName[MAX_PATH];
+	GetDefaultProxyName(szDefaultName, _countof(s_proxyName));
+	IniReadString("PROXY", "proxy_name", szDefaultName, s_proxyName, _countof(s_proxyName));
+
 	GetProxyFileName(s_proxyFileName, _countof(s_proxyFileName));
-	GetProxyName(s_proxyName, _countof(s_proxyName));
 	GetProxyConfigName(s_configFileName, MAX_PATH);
 	s_configFileModTime = GetFileModTime(s_configFileName);
 
