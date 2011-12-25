@@ -147,7 +147,7 @@ static void GetFileName(const char *fileName, char *outpath, int pathlen)
 	outpath[pathlen-1] = 0;
 }
 
-static LPSTR GetProxyFileName(LPSTR outpath, int pathlen)
+static LPSTR GetDefaultProxyName(LPSTR outpath, int pathlen)
 {
 	extern HMODULE g_hModule;
 	outpath[0] = 0;
@@ -174,17 +174,20 @@ static LPSTR GetProxyConfigName(LPSTR outpath, int pathlen)
 	return outpath;
 }
 
-static LPSTR GetDefaultProxyName(LPSTR outname, int maxlen)
+static LPSTR GetConfigFileName(LPCSTR proxyFileName, LPSTR outpath, int pathlen)
 {
-	extern HMODULE g_hModule;
-	char outpath[_MAX_PATH];
-	outpath[0] = outname[0] = 0;
-	GetModuleFileNameA(g_hModule, outpath, _countof(outpath));
-	char *pstr = strrchr(outpath, '.');
-	if (pstr) *pstr = 0;
-	pstr = strrchr(outpath, '\\');
-	if (pstr) *pstr++ = 0;
-	return lstrcpyn(outname, pstr, maxlen);
+	outpath[0] = 0;
+	char drive[_MAX_DRIVE], path[_MAX_PATH], fname[_MAX_FNAME], ext[_MAX_EXT];
+	_splitpath_s(proxyFileName, drive, path, fname, ext);
+	_makepath_s(outpath, pathlen, drive, path, fname, ".ini");
+	return outpath;
+}
+
+static LPSTR GetProxyName(LPCSTR proxyFileName, LPSTR outname, int namelen)
+{
+	outname[0] = 0;
+	_splitpath_s(proxyFileName, NULL, 0, NULL, 0, outname, namelen, NULL, 0);
+	return outname;
 }
 
 // local Ini file reader
@@ -256,11 +259,12 @@ void PrintNote(LogLevel level, char *pattern, ...)
 void Initialize()
 {
 	char szDefaultName[MAX_PATH];
-	GetDefaultProxyName(szDefaultName, _countof(s_proxyName));
-	IniReadString("PROXY", "proxy_name", szDefaultName, s_proxyName, _countof(s_proxyName));
+	GetProxyConfigName(s_configFileName, _countof(s_configFileName));
 
-	GetProxyFileName(s_proxyFileName, _countof(s_proxyFileName));
-	GetProxyConfigName(s_configFileName, MAX_PATH);
+	GetDefaultProxyName(szDefaultName, _countof(szDefaultName));
+	IniReadString("PROXY", "proxy_name", szDefaultName, s_proxyFileName, _countof(s_proxyFileName));
+	GetProxyName(s_proxyFileName, s_proxyName, _countof(s_proxyName));
+
 	s_configFileModTime = GetFileModTime(s_configFileName);
 
 	monitor_ini = IniReadInt("PROXY", "monitor_ini", 1); 
