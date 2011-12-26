@@ -401,7 +401,6 @@ static void OuterLoop()
 {
 	__try
 	{
-		Uninitialize();
 		Initialize();
 
 		while (TRUE)
@@ -412,7 +411,7 @@ static void OuterLoop()
 	}
 	__except(FilterFunction(GetExceptionInformation()))
 	{
-
+		Uninitialize();
 	}
 }
 
